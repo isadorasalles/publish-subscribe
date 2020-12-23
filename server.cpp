@@ -28,6 +28,13 @@ struct client_data {
 
 map<string, vector<int> > tags;
 
+void manda(int csock, string msg){
+    size_t count = send(csock, msg.c_str(), strlen(msg.c_str()) + 1, 0);
+    if (count != strlen(msg.c_str()) + 1) {
+        logexit("send");
+    }
+}
+
 string adiciona_tag(string buf_str, int csock){
     if (tags.find(buf_str) == tags.end()) {
     tags[buf_str].push_back(csock);
@@ -67,14 +74,43 @@ string deleta_tag(string buf_str, int csock){
     return retorno;
 }
 
-
-void manda(int csock, string msg){
-    size_t count = send(csock, msg.c_str(), strlen(msg.c_str()) + 1, 0);
-    if (count != strlen(msg.c_str()) + 1) {
-        logexit("send");
-    }
+void encaminha_msg(char buf[], int csock, string buf_str){
+    vector <string> tag;
+        int notfound = 0;
+        for (unsigned int i = 0; i < strlen(buf); i++){
+            if(buf[i] == '#' and (i == 0 or buf[i-1] == ' ')){
+                vector <char> aux;
+                unsigned int j;
+                for (j = i+1; j < strlen(buf); j++){
+                    if(buf[j] == ' ' or buf[j] == '\n') break;
+                    if(buf[j] == '#'){
+                        notfound=1; 
+                        break;
+                    } 
+                    aux.push_back(buf[j]);
+                }
+                if (notfound == 0){
+                    string t(aux.begin(), aux.end());
+                    tag.push_back(t);
+                }
+                i += j;
+            }
+        }
+        vector <int> visited;
+        vector <int>::iterator it;
+        for (unsigned int i = 0; i < tag.size(); i++){
+            cout << "[log] quantidade de clientes com a tag " << tag[i] << " eh: " << tags[tag[i]].size() << "\n";
+            for (unsigned int j = 0; j < tags[tag[i]].size(); j++){
+                if (tags[tag[i]][j] != csock){
+                    it = find(visited.begin(), visited.end(), tags[tag[i]][j]);
+                    if (it == visited.end()){
+                        manda(tags[tag[i]][j], buf_str);
+                        visited.push_back(tags[tag[i]][j]);
+                    }
+                }
+            }
+        }
 }
-
 
 string recebe(int csock){
     char buf[BUFSZ];
@@ -82,17 +118,12 @@ string recebe(int csock){
     size_t count = recv(csock, buf, BUFSZ - 1, 0);
     
     string buf_str = buf;
-    //buf_str.erase(0, 1);
-    //printf("[msg] %s, %d bytes: %s\n", caddrstr, (int)count, buf);
+    printf("[msg] %d bytes: %s", (int)count, buf);
     // if (strcmp(buf, "##kill\n"))
     //     //do something
     if (buf[0] == '+'){
         buf_str.erase(0, 1);
         buf_str.erase(buf_str.end()-1);
-        cout << buf_str;
-        cout << "Print pos add: \n";
-        for (unsigned int i = 0; i < tags[buf_str].size(); i++)
-            cout << tags[buf_str][i] << " size: " <<  tags[buf_str].size() << "\n";
         return adiciona_tag(buf_str, csock);    
     }
 
@@ -103,28 +134,8 @@ string recebe(int csock){
     }
 
     else {
-        vector <string> tag;
-        for (unsigned int i = 0; i < strlen(buf); i++){
-            if(buf[i] == '#'){
-                vector <char> aux;
-                for (unsigned int j = i+1; j < strlen(buf); j++){
-                    if(buf[j] == ' ' or buf[j] == '\n') break;
-                    aux.push_back(buf[j]);
-                }
-                string t(aux.begin(), aux.end());
-                tag.push_back(t);
-            }
-        }
-        cout << tag.size() << "\n";
-        for (unsigned int i = 0; i < tag.size(); i++){
-            cout << "tag: " << tag[i] << "\n";
-            cout << "size tags: " << tags[tag[i]].size() << "\n";
-            for (unsigned int j = 0; j < tags[tag[i]].size(); j++){
-                if (tags[tag[i]][j] != csock)
-                    manda(tags[tag[i]][j], buf_str);
-            }
-        }
-        return "1";
+        encaminha_msg(buf, csock, buf_str);
+        return "[log] Mensagem enviada com sucesso!";
     }
 }
 
@@ -199,10 +210,10 @@ int main(int argc, char **argv) {
         pthread_t tid;
         pthread_create(&tid, NULL, client_thread, cdata);
 
-        for(map<string,vector<int> >::iterator it = tags.begin(); it != tags.end(); ++it) {
-            cout << "Key: " << it->first << "\n";
-            cout << "Value: " << it->second.size() << "\n";
-        }
+        // for(map<string,vector<int> >::iterator it = tags.begin(); it != tags.end(); ++it) {
+        //     cout << "Key: " << it->first << "\n";
+        //     cout << "Value: " << it->second.size() << "\n";
+        // }
     }
 
     exit(EXIT_SUCCESS);
