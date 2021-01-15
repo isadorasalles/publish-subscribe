@@ -1,7 +1,7 @@
 all:
 	g++ -Wall -c common.cpp
-	g++ -Wall client.cpp common.o -lpthread -o client
-	g++ -Wall server.cpp common.o -lpthread -o servidor
+	g++ -Wall cliente.cpp common.o -lpthread -o cliente
+	g++ -Wall servidor.cpp common.o -lpthread -o servidor
 
 clean:
-	rm common.o client server
+	rm common.o cliente.o servidor.o

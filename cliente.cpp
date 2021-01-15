@@ -5,11 +5,17 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <bits/stdc++.h>
-
+#include <iostream>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+
+#define BUFSZ 500
+
+
+struct connect_data{
+	int csock;
+};
 
 void usage(int argc, char **argv) {
 	printf("usage: %s <server IP> <server port>\n", argv[0]);
@@ -17,33 +23,22 @@ void usage(int argc, char **argv) {
 	exit(EXIT_FAILURE);
 }
 
-#define BUFSZ 500
-
-struct connect_data{
-	int csock;
-};
-
+// funcao para receber dado da entrada padrao e mandar para o servidor
 void *manda(void *data){
 	while(1){
 		struct connect_data *cdata = (struct connect_data *)data;
 		char buf[BUFSZ];
 		memset(buf, 0, BUFSZ);
 		fgets(buf, BUFSZ-1, stdin);
-		std::string msg;// = "+dota\n+lol\n";
-		size_t count = send(cdata->csock, buf, BUFSZ+1 , 0);
-		// // std::cout << count << "\n";
-		// msg = "+teste\n #teste isso e uma mensagem ";
-		// count = send(cdata->csock, msg.c_str(), strlen(msg.c_str())+1 , 0);
-		// std::cout << count << "\n";
-		// msg = "particionada\n";
-		// count = send(cdata->csock, msg.c_str(), strlen(msg.c_str())+1 , 0);
-		if (count != strlen(buf)+1) {
+		size_t count = send(cdata->csock, buf, strlen(buf) , 0);
+		if (count != strlen(buf)) {
 			logexit("send");
 		}
 	}
 	pthread_exit(EXIT_SUCCESS);
 }
 
+// funcao para receber mensagens do client e printar na tela
 void *recebe(void *data){
 	while(1){
 		struct connect_data *cdata = (struct connect_data *)data;
